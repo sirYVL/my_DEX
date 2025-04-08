@@ -131,6 +131,8 @@ Es sollte noch einmal erwähnt werden, dass diese DEX absoluten Wert auf dezentr
 
 
 Gemeinsam verbessern und erweitern wir MyDEX stetig in unserem geschlossenen Entwicklerteam!
+Es sollte noch einmal erwähnt werden, dass diese DEX absoluten Wert auf dezentralität legt.
+
 
 
    
