@@ -1,0 +1,49 @@
+# my_dex/docker-compose.yaml
+#
+# NEU (Sicherheitsupdate):
+# 1) Falls du sensible Passwörter in node_config.yaml hast, nutze Docker Secrets/Env Vars statt direkter Volumes.
+# 2) Setze ggf. user=non-root in Dockerfile + user: in Compose, falls du Linux-Benutzer trennen willst.
+# 3) Prüfe, ob build: . bei jedem Service nötig ist (manchmal trennt man das in separate Dockerfiles).
+
+version: "3.9"
+
+services:
+  dex-node1:
+    build: .
+    container_name: dex_node1
+    image: my_dex:latest
+    volumes:
+      - ./config/node1.yaml:/home/dexuser/node_config.yaml
+    ports:
+      - "9001:9000"
+      - "9101:9100"
+    networks:
+      - dexnet
+
+  dex-node2:
+    build: .
+    container_name: dex_node2
+    image: my_dex:latest
+    volumes:
+      - ./config/node2.yaml:/home/dexuser/node_config.yaml
+    ports:
+      - "9002:9000"
+      - "9102:9100"
+    networks:
+      - dexnet
+
+  dex-node3:
+    build: .
+    container_name: dex_node3
+    image: my_dex:latest
+    volumes:
+      - ./config/node3.yaml:/home/dexuser/node_config.yaml
+    ports:
+      - "9003:9000"
+      - "9103:9100"
+    networks:
+      - dexnet
+
+networks:
+  dexnet:
+    driver: bridge
