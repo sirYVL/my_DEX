@@ -1,0 +1,97 @@
+# my_dex/k8s/helm/templates/deployment.yaml
+#
+# NEU (Sicherheitsupdate):
+#  1) Container-SecurityContext => runAsNonRoot, readOnlyRootFilesystem
+#  2) Resource-Requests/Limits => via .Values.resources
+#  3) ConfigMap readonly => mount readOnly
+#  4) PersistentVolumeClaim => Minimal kommentiert
+#
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: my-dex-node
+  labels:
+    app: my-dex
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: my-dex
+  template:
+    metadata:
+      labels:
+        app: my-dex
+    spec:
+      # NEU: Optional => spec.securityContext => runAsNonRoot: true
+      # securityContext:
+      #   runAsNonRoot: true
+      #   fsGroup: 2000
+      containers:
+      - name: dex-node
+        # Image + Tag aus Values
+        image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
+
+        # Definieren der Container-Ports
+        ports:
+          - name: dex
+            containerPort: {{ .Values.service.port }}
+          - name: metrics
+            containerPort: {{ .Values.service.metricsPort }}
+
+        env:
+          # Beispiel: Logging-Level aus Values holen
+          - name: RUST_LOG
+            value: "{{ .Values.nodeConfig.logLevel }}"
+
+        volumeMounts:
+          - name: dex-config
+            mountPath: /root/config
+            # readOnly: true  # => configMap könnte readOnly gemountet werden
+          - name: dex-storage
+            mountPath: /data/dex_db
+
+        # NEU: Container-spezifische securityContext (empfohlen)
+        # securityContext:
+        #   runAsNonRoot: true
+        #   allowPrivilegeEscalation: false
+        #   readOnlyRootFilesystem: false
+        #   runAsUser: 1000
+        #   runAsGroup: 1000
+
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: {{ .Values.service.metricsPort }}
+          initialDelaySeconds: 10
+          periodSeconds: 15
+          timeoutSeconds: 2
+          failureThreshold: 3
+
+        readinessProbe:
+          httpGet:
+            path: /readyz
+            port: {{ .Values.service.metricsPort }}
+          initialDelaySeconds: 5
+          periodSeconds: 10
+          timeoutSeconds: 2
+          failureThreshold: 3
+
+        # NEU: Resource-Limits => Aus .Values.resources
+        # resources:
+        #   limits:
+        #     cpu: {{ .Values.resources.limits.cpu }}
+        #     memory: {{ .Values.resources.limits.memory }}
+        #   requests:
+        #     cpu: {{ .Values.resources.requests.cpu }}
+        #     memory: {{ .Values.resources.requests.memory }}
+
+      volumes:
+        - name: dex-config
+          configMap:
+            name: my-dex-config
+        # => readOnly: true kannst du hier nicht direkt definieren, das geht im volumeMount
+
+        - name: dex-storage
+          persistentVolumeClaim:
+            claimName: dex-node-pvc
