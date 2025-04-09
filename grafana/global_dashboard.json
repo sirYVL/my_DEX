@@ -1,0 +1,44 @@
+// my_dex/grafana/global_dashboard.json
+
+{
+  "dashboard": {
+    "id": null,
+    "title": "Global Metrics Dashboard",
+    "timezone": "browser",
+    "panels": [
+      {
+        "type": "graph",
+        "title": "Global Order Total",
+        "datasource": "Prometheus",
+        "targets": [
+          {
+            "expr": "global_order_total",
+            "format": "time_series",
+            "interval": "",
+            "legendFormat": "Global Order Total",
+            "refId": "A"
+          }
+        ],
+        "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 }
+      },
+      {
+        "type": "graph",
+        "title": "Global CRDT Updates",
+        "datasource": "Prometheus",
+        "targets": [
+          {
+            "expr": "global_crdt_updates",
+            "format": "time_series",
+            "interval": "",
+            "legendFormat": "Global CRDT Updates",
+            "refId": "B"
+          }
+        ],
+        "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 }
+      }
+    ],
+    "schemaVersion": 16,
+    "version": 0
+  },
+  "overwrite": false
+}
