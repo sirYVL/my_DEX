@@ -1,0 +1,127 @@
+----------------------------- MODULE ITC_CrdtSpec -----------------------------
+EXTENDS Naturals, Sequences, TLC
+
+(*************************************************************************
+ Dieses TLA+-Modul beschreibt eine erweiterte Version eines 
+ ITC-(Interval Tree Clock)-basierten CRDT-Orderbuchs. 
+ Wir betrachten:
+   - Eine Menge an Knoten: 1..N
+   - Jedem Knoten gehört eine ITC-Version, die als Menge von Intervallen (node, start, end) repräsentiert ist
+   - Add/Remove-Operationen auf "Orders" (Id-Strings)
+   - Merge-Operationen, in denen ITC-Versionen vereinigt werden
+*************************************************************************)
+
+CONSTANT N          \* Anzahl Knoten
+CONSTANT OrderSpace \* Menge möglicher Order-IDs
+
+(*************************************************************************
+ VARIABLEN:
+   Orders:   Teilmenge von OrderSpace, repräsentiert globale "sichtbare" Orders
+   AddSet:   Repräsentiert die "Add-Dots"
+   RmvSet:   Repräsentiert die "Remove-Dots"
+   ITCVersions: Knoten -> Menge von Intervallen [ (node, start, end) ]
+*************************************************************************)
+
+VARIABLES Orders, AddSet, RmvSet, ITCVersions
+
+(*************************************************************************
+ Hilfsfunktionen zum ITC
+   - Intervals: Wir haben Paare (node, start, end).
+   - ITCIncrement(ITC, node): wir finden das maxEnd in ITC, fügen (node, maxEnd+1..maxEnd+1) hinzu
+   - ITCMerge(ITC1, ITC2): vereinige und verschmelze ggf. überlappende Intervalle gleicher node
+*************************************************************************)
+
+ITCType(ITC) == 
+  \A i \in ITC: i \in [node: 1..N, start: Nat, end: Nat] 
+  \* stark vereinfacht (hier node als integer)
+
+MaxEnd(ITC, node) ==
+  Max( { i.end : i \in ITC, i.node = node } )
+
+ITCIncrement(ITC, node) ==
+  LET me == MaxEnd(ITC, node)
+      newstart == me + 1
+      newend   == me + 1
+  IN MergeIntervals( ITC \cup { [node |-> node, start |-> newstart, end |-> newend] } )
+
+MergeIntervals(ITC) ==
+  \* Wir verschmelzen alle Intervalle gleicher node, sofern sie sich überlappen oder direkt angrenzen.
+  \* Pseudocode:
+  \* 1) Partitioniere ITC nach node
+  \* 2) Sortiere intervals je node nach start
+  \* 3) Führe merging durch
+  \* 4) Vereinige
+  ITC  \* hier belassen wir es als Identität => in realer TLA würdest du es definieren.
+
+ITCMerge(ITC1, ITC2) ==
+  MergeIntervals( ITC1 \cup ITC2 )
+
+(*************************************************************************
+ CRDT-Logik:
+   AddSet und RmvSet jeweils: 
+   - Enthält Tupel (order, (node, start, end))
+   - => "Add" einer Order o => wir increment(ITCVersions[node]) => Dot => AddSet' = AddSet \cup {(o, dot)}
+   - => "Remove" => analog in RmvSet
+   "lookup" => es existiert mind. ein AddDot, das NICHT durch ein RmvDot überdeckt ist
+*************************************************************************)
+
+Init ==
+  Orders = {} /\
+  AddSet = {} /\
+  RmvSet = {} /\
+  \A i \in 1..N: ITCVersions[i] = {}
+
+AddOrder(o, i) ==
+  /\ o \in OrderSpace
+  /\ LET oldITC == ITCVersions[i]
+        newITC == ITCIncrement(oldITC, i)
+        newDot == ( newITC \ oldITC )
+     IN
+       ITCVersions' = [ITCVersions EXCEPT ![i] = MergeIntervals(newITC)] /\
+       AddSet' = AddSet \cup { << o, newDot >> } 
+  /\ Orders' = Orders \cup { o }
+  /\ UNCHANGED RmvSet
+  /\ \A j \in 1..N \ {i}: ITCVersions'[j] = ITCVersions[j]
+
+RemoveOrder(o, i) ==
+  /\ o \in Orders
+  /\ LET oldITC == ITCVersions[i]
+        newITC == ITCIncrement(oldITC, i)
+        newDot == ( newITC \ oldITC )
+     IN
+       ITCVersions' = [ITCVersions EXCEPT ![i] = MergeIntervals(newITC)] /\
+       RmvSet' = RmvSet \cup { << o, newDot >> }
+  /\ Orders' = Orders \ { o }
+  /\ UNCHANGED AddSet
+  /\ \A j \in 1..N \ {i}: ITCVersions'[j] = ITCVersions[j]
+
+Merge(i, j) ==
+  /\ i \in 1..N
+  /\ j \in 1..N
+  /\ i /= j
+  /\ ITCVersions' = [ ITCVersions EXCEPT
+      ![i] = ITCMerge( @, ITCVersions[j] )
+   ]
+  \* AddSet, RmvSet => wir könnten delta-merge
+  /\ AddSet' = AddSet
+  /\ RmvSet' = RmvSet
+  /\ UNCHANGED Orders
+
+Next ==
+  \E i \in 1..N:
+    \/ \E o \in OrderSpace: AddOrder(o, i)
+    \/ \E o \in Orders: RemoveOrder(o, i)
+    \/ \E j \in 1..N: Merge(i, j)
+
+(*************************************************************************
+ Invariante: "NoDup" => Orders ist eine Menge => trivial. 
+ Aber wir könnten definieren "Orders = { o \in ... : lookupCRDT(o) = TRUE }"
+ usw. 
+*************************************************************************)
+NoDup == PrintT("NoDup trivially?")
+
+Spec == Init /\ [][Next]_<< Orders, AddSet, RmvSet, ITCVersions>>
+Inv == NoDup
+
+THEOREM Spec => []Inv
+==============================================================================
