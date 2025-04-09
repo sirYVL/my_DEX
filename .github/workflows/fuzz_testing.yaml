@@ -1,0 +1,43 @@
+# Folder: .github/workflows
+# File: fuzz_testing.yaml
+
+name: Fuzz Testing
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  fuzz-test:
+    name: Run Fuzz Tests using cargo-fuzz
+    runs-on: ubuntu-latest
+    steps:
+      # Checkout des Codes
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      # Einrichtung der Rust-Toolchain
+      - name: Set up Rust Toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+
+      # Installation von cargo-fuzz
+      - name: Install cargo-fuzz
+        run: cargo install cargo-fuzz
+
+      # F�hre den Fuzz-Test f�r die Nakamoto-Konsens-Komponente aus
+      - name: Run Fuzz Test on Nakamoto Consensus
+        run: cargo fuzz run fuzz_nakamoto -- -max_len=4096 -runs=100 2>&1 | tee fuzz_nakamoto_report.txt
+
+      # Hochladen des Fuzz-Test-Berichts als Artifact
+      - name: Upload Fuzz Test Report
+        uses: actions/upload-artifact@v3
+        with:
+          name: fuzz_nakamoto_report
+          path: fuzz_nakamoto_report.txt
