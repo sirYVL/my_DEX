@@ -1,0 +1,56 @@
+# my_dex/monitoring.yaml
+#
+# Beispielhafte Monitoring-Konfiguration f�r dein DEX-Projekt:
+# 1) Prometheus-Scrape-Interval & Basic-Auth
+# 2) Alertmanager-URL
+# 3) Logging/Traces
+# 4) Sicherheitshinweise: 
+#    - Passw�rter/Keys nicht in Klartext, besser env Vars
+#    - Falls du signierte Config brauchst, z. B. sign_monitoring_file.sh
+
+prometheus:
+  # Wie oft Prometheus Targets scrape soll
+  scrape_interval: 15s
+
+  # Falls dein prometheus-Endpoint BasicAuth hat:
+  basic_auth:
+    username: "${PROM_USER:-monitor}"
+    password: "${PROM_PASS:-monitorpass}"
+    # Tipp: In Production => env Var, KEIN Klartext
+
+  external_labels:
+    cluster: "my_dex_cluster"
+  
+  # Falls du Alertmanager verwendest
+  alertmanager_url: "http://alertmanager:9093"
+
+# Logging/Tracing
+logging:
+  level: "info"     # z. B. debug, info, warn
+  format: "json"    # text, json, ...
+  # Du k�nntest hier z. B. Pfade definieren
+  # logs_path: "/var/log/my_dex/"
+
+tracing:
+  # Falls du OpenTelemetry/Jaeger einsetzt
+  enabled: false
+  endpoint: "http://jaeger:14268/api/traces"
+
+# Falls du custom Dashboard oder Grafana-Einstellungen brauchst
+grafana:
+  dashboards:
+    - "global_dashboard.json"
+    - "node_dashboard.json"
+  provisioning_path: "/etc/grafana/provisioning"
+
+# Fallback oder default
+defaults:
+  # Falls du Standardwerte �berschreiben m�chtest
+  # a la "scrape_timeout", etc.
+  # ...
+  pass
+
+# Sicherheitshinweis:
+#  * Lege hier KEINE sensiblen Secrets im Klartext ab.
+#  * Falls du diese Datei signieren willst, nutze eine separate .sig
+#    und verifiziere sie beim Laden (z. B. `verify_config_signature()`).
