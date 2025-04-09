@@ -1,0 +1,63 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dex-node
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: dex-node
+  template:
+    metadata:
+      labels:
+        app: dex-node
+    spec:
+      # NEU (Sicherheitsupdate): 
+      # 1) runAsNonRoot => Konteiner läuft nicht als root
+      # 2) readOnlyRootFilesystem => Falls dein Dex Node kein Write-Access ins FS braucht
+      # 3) securityContext => du kannst custom user IDs definieren
+      securityContext:
+        runAsNonRoot: true
+        fsGroup: 2000
+      containers:
+      - name: dex-node
+        image: my_dex:latest
+        ports:
+        - containerPort: 9000
+          name: p2p
+        - containerPort: 9100
+          name: metrics
+        # NEU: 
+        # Wenn dein DexNode-Binary CLI-Parameter akzeptiert, kannst du hier
+        # '--config /etc/dex/node_config.yaml' definieren
+        args: ["--config", "/etc/dex/node_config.yaml"]
+        # Optional => securityContext auf Container-Ebene:
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: false # Falls du Logs etc. schreibst, setze true, 
+                                        # + VolumeMounts für die Schreibverzeichnisse
+        volumeMounts:
+        - name: dex-config
+          mountPath: /etc/dex
+          readOnly: true
+      volumes:
+      - name: dex-config
+        configMap:
+          name: dex-node-config
+
+---
+# Service etc. - typischer NodePort oder ClusterIP
+apiVersion: v1
+kind: Service
+metadata:
+  name: dex-node-svc
+spec:
+  # NEU: Du könntest 'type: ClusterIP' definieren, 
+  # oder NodePort/LoadBalancer je nach Setup
+  ports:
+    - port: 9000
+      name: dex-node-p2p
+    - port: 9100
+      name: dex-node-metrics
+  selector:
+    app: dex-node
