@@ -1,0 +1,30 @@
+# alert_rules.yaml
+#
+# NEU (Sicherheitsupdate):
+#  - Kommentar zu Minimierung von False Positives / Spam-Alerts
+#  - Optional: Authentifizierung / TLS für Alertmanager
+#  - Keine sensiblen Daten hier hinterlegen (z. B. Passwörter).
+
+rule_files:
+  - "src/monitoring/alert_rules.yaml"
+
+groups:
+  - name: global_security_alerts
+    rules:
+      - alert: HighGlobalOrderTotal
+        expr: global_order_total > 100
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Hohe Anzahl globaler Bestellungen"
+          description: "Die Anzahl globaler Bestellungen ist in den letzten 5 Minuten über 100 gestiegen."
+      
+      - alert: HighGlobalCrdtUpdates
+        expr: global_crdt_updates > 50
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Hohe Anzahl globaler CRDT-Updates"
+          description: "Die Anzahl der CRDT-Updates ist in den letzten 5 Minuten über 50 gestiegen."
