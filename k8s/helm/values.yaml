@@ -1,0 +1,34 @@
+# my_dex/k8s/helm/values.yaml
+#
+# NEU (Sicherheitsupdate):
+# 1) Ressourcen-Requests/Limits => schon vorhanden, kannst aber engere Grenzen definieren.
+# 2) Eventuell Secrets (z. B. nodeConfig.hsmPin) via K8S-Secrets, statt Klartext im values.yaml
+# 3) Replika-Anzahl => 3, du könntest in Prod minimal mehr CPU/Memory definieren.
+
+replicaCount: 3
+
+image:
+  repository: my_dex_image
+  tag: "latest"
+  pullPolicy: IfNotPresent
+
+service:
+  type: ClusterIP
+  port: 9000
+  metricsPort: 9100
+
+resources:
+  limits:
+    cpu: 500m
+    memory: 512Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi
+
+nodeConfig:
+  logLevel: info
+  orderTimeoutSec: 86400
+  # etc.
+  # HINWEIS: Falls du hier Passwörter/HSM-PIN etc. einträgst,
+  #   nutze lieber helm-Secrets oder K8S-Secrets + envFrom
+  #   anstatt Klartext in values.yaml
