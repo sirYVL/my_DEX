@@ -1,0 +1,44 @@
+// my_dex/grafana/local_dashboard.json
+
+{
+  "dashboard": {
+    "id": null,
+    "title": "Local Metrics Dashboard",
+    "timezone": "browser",
+    "panels": [
+      {
+        "type": "graph",
+        "title": "Node CPU Usage",
+        "datasource": "Prometheus",
+        "targets": [
+          {
+            "expr": "node_cpu_usage",
+            "format": "time_series",
+            "interval": "",
+            "legendFormat": "CPU Usage",
+            "refId": "A"
+          }
+        ],
+        "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 }
+      },
+      {
+        "type": "graph",
+        "title": "Node Memory Usage",
+        "datasource": "Prometheus",
+        "targets": [
+          {
+            "expr": "node_mem_usage",
+            "format": "time_series",
+            "interval": "",
+            "legendFormat": "Memory Usage",
+            "refId": "B"
+          }
+        ],
+        "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 }
+      }
+    ],
+    "schemaVersion": 16,
+    "version": 0
+  },
+  "overwrite": false
+}
