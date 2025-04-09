@@ -1,0 +1,48 @@
+# Folder: .github/workflows
+# File: dependency_management.yaml
+
+name: Automated Dependency Management
+
+on:
+  push:
+    branches:
+      - main
+  schedule:
+    - cron: '0 0 * * *'  # T�gliche Ausf�hrung
+
+jobs:
+  dependency-management:
+    name: Run Cargo Audit for Automated Dependency Management
+    runs-on: ubuntu-latest
+    steps:
+      # Checkout des Codes
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      # Einrichtung der Rust-Toolchain
+      - name: Set up Rust Toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+
+      # Ausf�hren von cargo audit und Speichern des Berichts
+      - name: Run Cargo Audit and Save Report
+        run: |
+          cargo audit 2>&1 | tee cargo_audit_report.txt
+        continue-on-error: true
+
+      # �berpr�fen, ob Sicherheitsl�cken gefunden wurden, und Erstellen eines Issues
+      - name: Check for Vulnerabilities and Create Issue
+        run: |
+          if grep -q "Vulnerabilities found" cargo_audit_report.txt; then
+            echo "Vulnerabilities detected."
+            ISSUE_TITLE="Vulnerability Alert: Dependency Issues Found"
+            ISSUE_BODY="Automated cargo audit detected dependency vulnerabilities. Please review the following report:\n\n\`\`\`\n$(cat cargo_audit_report.txt)\n\`\`\`\n\nInitiate a decentralized review process for updates."
+            curl -X POST -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+                 -H "Content-Type: application/json" \
+                 -d "{\"title\": \"$ISSUE_TITLE\", \"body\": \"$ISSUE_BODY\"}" \
+                 "https://api.github.com/repos/${{ github.repository }}/issues"
+          else
+            echo "No vulnerabilities detected."
+          fi
