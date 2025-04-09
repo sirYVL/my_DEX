@@ -1,0 +1,11 @@
+# my_dex/k8s/helm/Chart.yaml
+#
+#  1) Hinweis auf Chart-Signierung (helm package --sign).
+#  2) Allgemeine Versionierungs-Best Practices.
+#
+apiVersion: v2
+name: my-dex
+description: "A helm chart for My Dex Node"
+type: application
+version: 0.1.0
+appVersion: "0.2.0"
