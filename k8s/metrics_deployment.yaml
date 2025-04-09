@@ -1,0 +1,51 @@
+# my_dex/k8s/metrics_deployment.yaml
+#
+# NEU (Sicherheitsupdate):
+#  1) securityContext => runAsNonRoot, readOnlyRootFilesystem
+#  2) Optional: env-Variables anstatt Klartext-Passwörter
+#  3) Minimaler Pod => CPU/Memory-Limits
+#
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: my-dex-metrics
+  labels:
+    app: my-dex-metrics
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: my-dex-metrics
+  template:
+    metadata:
+      labels:
+        app: my-dex-metrics
+    spec:
+      # Du kannst hier einen globalen securityContext definieren.
+      securityContext:
+        runAsNonRoot: true
+      containers:
+        - name: metrics-server
+          image: your_dockerhub_username/my_dex:latest
+          command: ["/usr/local/bin/my_dex", "--metrics-server"]
+          ports:
+            - containerPort: 9100
+              name: metrics
+
+          # NEU: Container-spezifische securityContext
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: false
+            # user, group => anpassen, falls dein Dockerfile USER sets
+            # runAsUser: 1000
+            # runAsGroup: 1000
+
+          # Optional: CPU/Memory-Limits => so kann ein fehlerhafter metrics-server
+          # das Cluster nicht lahmlegen.
+          # resources:
+          #   limits:
+          #     cpu: "200m"
+          #     memory: "256Mi"
+          #   requests:
+          #     cpu: "100m"
+          #     memory: "128Mi"
