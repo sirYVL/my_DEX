@@ -1,0 +1,57 @@
+# node_config.yaml
+#
+# NEU (Sicherheitsanmerkungen):
+#  - "keystore_pass", "hsm_pin", "turn_password" etc. stehen hier im Klartext – in Produktion solltest du
+#    solche Secrets besser in Env Vars oder K8S-Secrets ablegen.
+#  - "SUPER_SECRET" und "1234" => nur Demowerte.
+#  - "db_max_retries", "merge_backoff_sec", etc. => plausible, könntest du per Config-Signatur validieren.
+
+node_id: "NodeA"
+listen_addr: "127.0.0.1:9000"
+metrics_addr: "127.0.0.1:9100"
+jaeger_addr: "127.0.0.1:14268/api/traces"
+atomic_swap_timeout_sec: 30
+crdt_merge_interval_sec: 10
+log_level: "info"
+db_path: "dex_data"
+
+db_max_retries: 3
+db_backoff_sec: 2
+
+merge_max_retries: 3
+merge_backoff_sec: 1
+
+use_noise: true
+
+keystore_path: "keystore.json"
+keystore_pass: "SUPER_SECRET"    # Achtung: Nur Demo – in Production NICHT Klartext
+allowed_node_pubkeys: []
+
+order_timeout_sec: 86400     # 24 Stunden
+swap_timeout_sec: 7200       # 2 Stunden
+
+num_shards: 8
+partial_fill_min_amount: 0.0001
+
+use_hardware: false
+pkcs11_lib_path: "/usr/lib/opensc-pkcs11.so"
+slot_id: 0
+hsm_pin: "1234"              # Nur Demo – in Production NICHT Klartext
+
+# Neue Felder für NTP-Zeitsynchronisation:
+ntp_servers:
+  - "0.europe.pool.ntp.org"
+  - "1.europe.pool.ntp.org"
+  - "2.europe.pool.ntp.org"
+  - "3.europe.pool.ntp.org"
+
+# Neue Felder für STUN/TURN (NAT Traversal)
+stun_server: "stun.example.com:3478"
+turn_server: "turn.example.com:3478"
+turn_username: "myuser"
+turn_password: "mypass"      # Nur Demo – in Production NICHT Klartext
+
+# Neue Felder für Settlement-Fees
+settlement_fees:
+  standard: 0.001         # z. B. 0.1%
+  atomic_swap: 0.002      # z. B. 0.2%
