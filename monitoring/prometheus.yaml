@@ -1,0 +1,46 @@
+# prometheus.yaml
+#
+# NEU (Sicherheitsupdate):
+#  - Kommentare zu Keyfiles/Self-Signed-Zertifikaten (dev_cert.crt, dev_key.key)
+#  - Hinweise zu passwortgeschützter Keynutzung oder K8S-Secrets
+#  - "insecure_skip_verify: true" => nur in Development/Testing
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  # 1) Dein bereits existierender Dex-Nodes Job:
+  - job_name: "dex-nodes"
+    static_configs:
+      - targets:
+          # Falls du 3 Nodes via Docker Compose auf 9101..9103 mappst
+          - "localhost:9101"
+          - "localhost:9102"
+          - "localhost:9103"
+
+  # 2) Global Monitoring Job (z.B. mTLS auf Port 9443):
+  - job_name: "global"
+    scheme: https
+    tls_config:
+      ca_file: "client_ca.crt"
+      cert_file: "dev_cert.crt"
+      key_file: "dev_key.key"
+      # HINWEIS:
+      # 1) Speichere diese Keys idealerweise *nicht* im Klartext 
+      #    in git – nutze K8S-Secrets oder env Vars.
+      # 2) 'dev_cert.crt' & 'dev_key.key' => passwortgeschützt 
+      #    oder nur zu Demo/Dev-Zwecken
+      #
+      # Falls du Self-Signed-Zertifikate hast und Prometheus sie
+      # akzeptieren soll, ggf.:
+      # insecure_skip_verify: true   # Achtung: Nur in Dev, *nicht* in Production
+    static_configs:
+      - targets:
+          - "deine-node-ip-oder-hostname:9443"
+
+  # 3) Node Monitoring Job (Port 9200), unverschlüsselt
+  - job_name: "node"
+    static_configs:
+      - targets:
+          - "deine-node-ip-oder-hostname:9200"
