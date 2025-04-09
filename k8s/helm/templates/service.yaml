@@ -1,0 +1,32 @@
+# my_dex/k8s/helm/templates/service.yaml
+#
+# NEU (Sicherheitsupdate):
+#  - Hinweis auf Service-Typ (ClusterIP vs. NodePort vs. LoadBalancer)
+#  - TLS / mTLS via Ingress-Controller o. Ä. in Production
+#
+apiVersion: v1
+kind: Service
+metadata:
+  name: my-dex-service
+  labels:
+    app: my-dex
+spec:
+  # Der Servicetyp (z. B. ClusterIP, NodePort, LoadBalancer) wird über Helm-Values gesetzt
+  type: {{ .Values.service.type }}
+
+  selector:
+    app: my-dex
+
+  ports:
+    - name: node
+      # Der externe Port, über den auf den Service zugegriffen wird
+      port: {{ .Values.service.port }}
+      # Weiterleitung an den Container-Port (bzw. Container-Port-Name),
+      # der in der Deployment definiert ist
+      targetPort: {{ .Values.service.port }}
+
+    - name: metrics
+      # Externer Port für Metriken
+      port: {{ .Values.service.metricsPort }}
+      # Weiterleitung an den Container-Port/Name "metrics" aus der Deployment
+      targetPort: {{ .Values.service.metricsPort }}
