@@ -5,7 +5,8 @@
 #  2) Resource-Requests/Limits => via .Values.resources
 #  3) ConfigMap readonly => mount readOnly
 #  4) PersistentVolumeClaim => Minimal kommentiert
-#
+#  5) Secrets für Passwörter eingebunden
+
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -22,17 +23,11 @@ spec:
       labels:
         app: my-dex
     spec:
-      # NEU: Optional => spec.securityContext => runAsNonRoot: true
-      # securityContext:
-      #   runAsNonRoot: true
-      #   fsGroup: 2000
       containers:
       - name: dex-node
-        # Image + Tag aus Values
         image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
         imagePullPolicy: {{ .Values.image.pullPolicy }}
 
-        # Definieren der Container-Ports
         ports:
           - name: dex
             containerPort: {{ .Values.service.port }}
@@ -40,24 +35,37 @@ spec:
             containerPort: {{ .Values.service.metricsPort }}
 
         env:
-          # Beispiel: Logging-Level aus Values holen
           - name: RUST_LOG
             value: "{{ .Values.nodeConfig.logLevel }}"
+          - name: DEX_KEYSTORE_PASS
+            valueFrom:
+              secretKeyRef:
+                name: my-dex-secrets
+                key: DEX_KEYSTORE_PASS
+          - name: DEX_HSM_PIN
+            valueFrom:
+              secretKeyRef:
+                name: my-dex-secrets
+                key: DEX_HSM_PIN
+          - name: DEX_TURN_PASS
+            valueFrom:
+              secretKeyRef:
+                name: my-dex-secrets
+                key: DEX_TURN_PASS
 
         volumeMounts:
           - name: dex-config
             mountPath: /root/config
-            # readOnly: true  # => configMap könnte readOnly gemountet werden
+            readOnly: true
           - name: dex-storage
             mountPath: /data/dex_db
 
-        # NEU: Container-spezifische securityContext (empfohlen)
-        # securityContext:
-        #   runAsNonRoot: true
-        #   allowPrivilegeEscalation: false
-        #   readOnlyRootFilesystem: false
-        #   runAsUser: 1000
-        #   runAsGroup: 1000
+        securityContext:
+          runAsNonRoot: true
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          runAsUser: 1000
+          runAsGroup: 1000
 
         livenessProbe:
           httpGet:
@@ -77,20 +85,18 @@ spec:
           timeoutSeconds: 2
           failureThreshold: 3
 
-        # NEU: Resource-Limits => Aus .Values.resources
-        # resources:
-        #   limits:
-        #     cpu: {{ .Values.resources.limits.cpu }}
-        #     memory: {{ .Values.resources.limits.memory }}
-        #   requests:
-        #     cpu: {{ .Values.resources.requests.cpu }}
-        #     memory: {{ .Values.resources.requests.memory }}
+        resources:
+          limits:
+            cpu: {{ .Values.resources.limits.cpu }}
+            memory: {{ .Values.resources.limits.memory }}
+          requests:
+            cpu: {{ .Values.resources.requests.cpu }}
+            memory: {{ .Values.resources.requests.memory }}
 
       volumes:
         - name: dex-config
           configMap:
             name: my-dex-config
-        # => readOnly: true kannst du hier nicht direkt definieren, das geht im volumeMount
 
         - name: dex-storage
           persistentVolumeClaim:
