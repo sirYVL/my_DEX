@@ -12,6 +12,10 @@ jobs:
   build:
     name: Build & Test
     runs-on: ubuntu-latest
+    env:
+      DEX_KEYSTORE_PASS: ${{ secrets.DEX_KEYSTORE_PASS }}
+      DEX_HSM_PIN: ${{ secrets.DEX_HSM_PIN }}
+      DEX_TURN_PASS: ${{ secrets.DEX_TURN_PASS }}
     steps:
       # 1) Repository auschecken
       - name: Checkout Repository
