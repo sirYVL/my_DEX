@@ -1,0 +1,45 @@
+# === Rust Build-Output ===
+/target
+**/*.rs.bk
+
+# === Cargo Package ===
+/Cargo.lock
+/Cargo.toml.orig
+
+# === Logs ===
+*.log
+*.tmp
+*.swp
+
+# === Environment Secrets ===
+.env
+
+# === VS Code / JetBrains IDEs ===
+.vscode/
+.idea/
+*.sublime-workspace
+*.sublime-project
+
+# === Docker Artifacts ===
+*.pid
+*.sock
+*.tar
+*.bak
+.docker/
+
+# === Config Overrides ===
+config/*local*.yaml
+config/*.dev.yaml
+
+# === Node Runtime Output (optional) ===
+/dex_node_db
+/dex_data
+*.sqlite
+
+# === IPFS Files ===
+.ipfs/
+.ipfs_cluster/
+
+# === Misc ===
+.DS_Store
+Thumbs.db
