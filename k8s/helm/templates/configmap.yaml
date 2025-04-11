@@ -1,8 +1,8 @@
 # my_dex/k8s/helm/templates/configmap.yaml
 #
 # NEU (Sicherheitsupdate):
-#  - Kommentar, dass Passwörter in Klartext (keystore_pass) in Production NICHT empfohlen
-#  - Optionale Signatur oder Helm Secrets für das ConfigFile
+#  - Klartextpasswörter entfernt – Verwendung über Kubernetes Secrets empfohlen
+#  - ENV-Namen in der ConfigMap – werden im Code per std::env::var() geladen
 #
 apiVersion: v1
 kind: ConfigMap
@@ -26,7 +26,9 @@ data:
     merge_backoff_sec: 1
     use_noise: true
     keystore_path: "keystore.json"
-    keystore_pass: "SUPER_SECRET"    # Achtung: Klartextpasswort => in Production besser als Secret
+    keystore_pass_env: "DEX_KEYSTORE_PASS"
+    hsm_pin_env: "DEX_HSM_PIN"
+    turn_password_env: "DEX_TURN_PASS"
     allowed_node_pubkeys: []
     order_timeout_sec: {{ .Values.nodeConfig.orderTimeoutSec | default 86400 }}
     swap_timeout_sec: {{ .Values.nodeConfig.swapTimeoutSec | default 7200 }}
