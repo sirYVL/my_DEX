@@ -2,13 +2,12 @@
 /// my_DEX/src/storage/dex_db.rs
 ///////////////////////////////////////////////////////////////////////////
 
-
 //! DexDB implementiert eine persistente Speicherung via RocksDB
 //! mit Column Families, sowie einen optionalen In-Memory-Fallback,
-//! falls das �ffnen von RocksDB mehrfach fehlschl�gt.
+//! falls das Öffnen von RocksDB mehrfach fehlschlägt.
 //!
 //! Die API stellt einfache PUT/GET/DELETE-Methoden bereit. Je nach Bedarf
-//! kannst du weitere Helpers erg�nzen (z.B. list_keys_in_cf usw.).
+//! kannst du weitere Helpers ergänzen (z.B. list_keys_in_cf usw.).
 
 use anyhow::{anyhow, Result};
 use rocksdb::{
@@ -45,21 +44,21 @@ impl InMemoryDb {
     }
 }
 
-/// DexDB � umschlie�t RocksDB und optionalen InMemory-Fallback.
-/// F�r persistente Nutzung legen wir in der Regel ColumnFamilies an.
-/// Wenn das �ffnen von RocksDB mehrfach scheitert, verwenden wir fallback_mem.
+/// DexDB – umschließt RocksDB und optionalen InMemory-Fallback.
+/// Für persistente Nutzung legen wir in der Regel ColumnFamilies an.
+/// Wenn das Öffnen von RocksDB mehrfach scheitert, verwenden wir fallback_mem.
 pub struct DexDB {
     /// Entweder Some(DB), oder None => fallback_mem nutzen.
     pub db: Option<Arc<DB>>,
     pub fallback_mem: Option<Arc<Mutex<InMemoryDb>>>,
-    // hier k�nntest du z.B. ColumnFamily-Handles ablegen:
+    // hier könntest du z.B. ColumnFamily-Handles ablegen:
     pub default_cf: Option<ColumnFamily>,
     // ... weitere CFs, falls du willst
 }
 
 impl DexDB {
-    /// �ffnet die RocksDB am Pfad path. Erzeugt ColumnFamilies, falls n�tig.
-    /// Gibt bei Erfolg Ok(DexDB { db: Some(...), fallback_mem: None }) zur�ck.
+    /// Öffnet die RocksDB am Pfad path. Erzeugt ColumnFamilies, falls nötig.
+    /// Gibt bei Erfolg Ok(DexDB { db: Some(...), fallback_mem: None }) zurück.
     pub fn open(path: &str) -> Result<Self> {
         let mut opts = Options::default();
         opts.create_if_missing(true);
@@ -86,7 +85,7 @@ impl DexDB {
         })
     }
 
-    /// �ffnet mit mehreren Retries. Falls alle fehlschlagen, wird ein
+    /// Öffnet mit mehreren Retries. Falls alle fehlschlagen, wird ein
     /// InMemory-Fallback initialisiert, um den Node notfalls offline
     /// weiterlaufen zu lassen.
     pub fn open_with_retries(path: &str, max_retries: u32, backoff_secs: u64) -> Result<Self> {
@@ -100,7 +99,7 @@ impl DexDB {
                 },
                 Err(e) => {
                     if attempts >= max_retries {
-                        eprintln!("RocksDB �ffnen fehlgeschlagen nach {} Versuchen: {:?}", attempts, e);
+                        eprintln!("RocksDB öffnen fehlgeschlagen nach {} Versuchen: {:?}", attempts, e);
                         eprintln!("=> Fallback auf InMemoryDb!");
                         let mem = InMemoryDb::default();
                         return Ok(DexDB {
@@ -109,7 +108,7 @@ impl DexDB {
                             default_cf: None,
                         });
                     } else {
-                        eprintln!("RocksDB �ffnen fehlgeschlagen (Versuch {}/{}): {:?}. Warte {}s.", attempts, max_retries, e, backoff_secs);
+                        eprintln!("RocksDB öffnen fehlgeschlagen (Versuch {}/{}): {:?}. Warte {}s.", attempts, max_retries, e, backoff_secs);
                         thread::sleep(std::time::Duration::from_secs(backoff_secs));
                     }
                 }
@@ -117,7 +116,7 @@ impl DexDB {
         }
     }
 
-    /// Put � schreibt in die DB (oder fallback).
+    /// Put – schreibt in die DB (oder fallback).
     /// - cf_name => z. B. "default"
     /// - key & val => Bytes
     pub fn put(&self, cf_name: &str, key: &[u8], val: &[u8]) -> Result<()> {
@@ -174,7 +173,7 @@ impl DexDB {
         Ok(())
     }
 
-    /// Optionale Auflistung aller Schl�ssel in einer CF (Beispiel):
+    /// Optionale Auflistung aller Schlüssel in einer CF (Beispiel):
     pub fn list_keys_in_cf(&self, cf_name: &str) -> Result<Vec<Vec<u8>>> {
         let mut result = Vec::new();
         if let Some(db) = &self.db {
@@ -194,7 +193,7 @@ impl DexDB {
                 if let Some(idx) = k.find('|') {
                     let (cf_part, key_part) = k.split_at(idx);
                     if cf_part == cf_name {
-                        // skip '|' 
+                        // skip '|'
                         let real_key = &key_part[1..];
                         result.push(real_key.as_bytes().to_vec());
                     }
