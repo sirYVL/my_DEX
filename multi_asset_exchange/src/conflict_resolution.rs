@@ -2,8 +2,9 @@
 
 use crate::order::{Order, OrderType, OrderSide, OrderStatus};
 use std::collections::HashMap;
+use tracing::warn; // Verwende strukturiertes Logging statt println!
 
-/// Beispiel-Struct, falls du Track pro Order machst
+/// Struktur zur Konfliktverfolgung: z. B. wie oft eine Order geändert wurde
 pub struct ConflictResolution {
     pub order_history: HashMap<String, u32>,
 }
@@ -17,7 +18,7 @@ impl ConflictResolution {
 
     /// Wir tracken, wie oft eine bestimmte Order geändert wird.
     /// Sobald sie zu oft geändert wurde, könnte ein Manipulationsversuch vorliegen.
-    /// (Im Produktionsbetrieb würde man hier ggf. eine strengere Prüfung wünschen.)
+    /// Produktionssysteme sollten hier ggf. noch restriktiver reagieren.
     pub fn track_order_changes(&mut self, order_id: &str) -> bool {
         let c = self.order_history.entry(order_id.to_string()).or_insert(0);
         *c += 1;
@@ -25,22 +26,17 @@ impl ConflictResolution {
     }
 
     /// Sortierlogik:
-    /// - Market zuerst
-    /// - Bei Limit/Stop:
-    ///   * Kauforders => descending Price
-    ///   * Sellorders => ascending Price
-    /// - FIFO bei Gleichstand
+    /// - Market Orders haben Priorität
+    /// - Limit/Stop nach Preis (Buy = descending, Sell = ascending)
+    /// - Bei Gleichstand => FIFO nach Zeitstempel
     ///
-    /// Neu (Sicherheitsaspekt):
-    ///   Wir werfen Orders, deren Signatur ungültig ist, optional aus der Sortierung heraus.
-    ///   (In einer echten DEX sollte man sie evtl. erst gar nicht in die Liste aufnehmen.)
+    /// Sicherheitsaspekt:
+    ///   Orders mit ungültiger Signatur werden entfernt.
     pub fn prioritize_orders(orders: &mut [Order]) {
-        // Filtern von Orders ohne gültige Signatur (Beispiel, falls du so ein Feld nutzt).
-        // Wenn deine Order-Struktur gar keine Signatur hat, kannst du diesen Schritt anpassen.
+        // Sicherheits-Filter: nur gültig signierte Orders zulassen
         orders.retain(|o| {
             if !o.verify_signature() {
-                // Du könntest hier loggen oder den Status auf 'Cancelled' setzen.
-                println!("Warn: Ungültige Signatur in Order {} => ignoriert", o.id);
+                warn!("Ungültige Signatur in Order {} => ignoriert", o.id);
                 false
             } else {
                 true
@@ -49,7 +45,7 @@ impl ConflictResolution {
 
         use std::cmp::Ordering::*;
         orders.sort_by(|a, b| {
-            // Market vs. Market => FIFO
+            // Market Orders haben Vorrang
             let a_market = matches!(a.order_type, OrderType::Market);
             let b_market = matches!(b.order_type, OrderType::Market);
             if a_market && !b_market {
@@ -59,10 +55,10 @@ impl ConflictResolution {
                 return Greater;
             }
             if a_market && b_market {
-                return a.timestamp.cmp(&b.timestamp);
+                return a.timestamp.cmp(&b.timestamp); // FIFO
             }
 
-            // Ansonsten Limit/Stop => Price
+            // Preisvergleich bei Limit/Stop
             let aprice = match a.order_type {
                 OrderType::Limit(px) | OrderType::Stop(px) => px,
                 OrderType::Market => f64::MAX,
@@ -74,7 +70,6 @@ impl ConflictResolution {
 
             match (a.side, b.side) {
                 (OrderSide::Buy, OrderSide::Buy) => {
-                    // descending
                     if aprice > bprice {
                         Less
                     } else if aprice < bprice {
@@ -84,7 +79,6 @@ impl ConflictResolution {
                     }
                 }
                 (OrderSide::Sell, OrderSide::Sell) => {
-                    // ascending
                     if aprice < bprice {
                         Less
                     } else if aprice > bprice {
@@ -93,8 +87,7 @@ impl ConflictResolution {
                         a.timestamp.cmp(&b.timestamp)
                     }
                 }
-                // fallback
-                _ => a.timestamp.cmp(&b.timestamp),
+                _ => a.timestamp.cmp(&b.timestamp), // Fallback
             }
         });
     }
