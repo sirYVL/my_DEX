@@ -185,6 +185,15 @@ impl DexNode {
 
     #[instrument(name="node_place_order", skip(self, req))]
     pub fn place_order(&self, req: OrderRequest) -> Result<(), DexError> {
+        // 🚫 Banned-Prüfung (Watchtower)
+        if let Some(global_sec) = &self.global_security {
+            if global_sec.lock().unwrap().is_banned(&req.user_id) {
+                return Err(DexError::Other(format!(
+                    "User {} ist vom Netzwerk gesperrt", req.user_id
+                )));
+            }
+        }
+
         // 1) check free
         let mut bals = self.balances.lock().unwrap();
         let bal_key = (req.user_id.clone(), req.coin_to_sell.clone());
