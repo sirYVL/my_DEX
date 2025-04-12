@@ -146,3 +146,4 @@ impl Watchtower {
         self.banned_accounts.contains(channel_id)
     }
 }
+
