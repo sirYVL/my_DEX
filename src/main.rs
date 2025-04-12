@@ -397,6 +397,12 @@ mod monitoring_logging {
 
 use monitoring_logging::{get_global_logger, Logger, LogEntry};
 
+// ─────────────────────────────────────────────────────────────
+// REST API Modul Integration
+// ─────────────────────────────────────────────────────────────
+mod rest_api;
+use rest_api::{build_rest_api, AppState};
+
 ///////////////////////////////////////////////////////////
 // Integration des neuen asynchronen Sicherheits-Tasks-Moduls
 ///////////////////////////////////////////////////////////
@@ -715,7 +721,20 @@ async fn main() -> Result<()> {
             light_client.monitor_consensus(Duration::from_secs(30)).await;
         });
         info!("Light Client Konsensüberprüfung gestartet.");
-    }
+    
+        let api_state = AppState {
+            node: Arc::new(node.clone()),
+        };
+        
+        let api_router = build_rest_api(api_state);
+        tokio::spawn(async move {
+            let addr = "0.0.0.0:8080".parse::<SocketAddr>().unwrap();
+            info!("REST-API läuft auf {}", addr);
+            axum::Server::bind(&addr)
+                .serve(api_router.into_make_service())
+                .await
+                .expect("REST-API konnte nicht gestartet werden");
+    });
 
     // (9) MatchingEngine initialisieren
     let mut engine = MatchingEngine::new_with_global_security(Some(global_sec_arc.clone()));
