@@ -54,6 +54,7 @@ use crate::monitoring::global_monitoring::start_global_monitoring_server;
 use crate::monitoring::node_monitoring::start_node_monitoring_server;
 use crate::security::async_security_tasks::run_security_tasks;
 use crate::logging::enhanced_logging::{init_enhanced_logging, log_error, write_audit_log};
+use crate::tracing_setup::init_tracing_with_otel_from_env;
 use crate::network::p2p_security::{P2PSecurityConfig, AdvancedP2PSecurity, P2PSecurity};
 use crate::network::cluster_management::ClusterManager;
 use crate::kademlia::kademlia_service::{KademliaService, NodeId, KademliaMessage, KademliaP2PAdapter};
@@ -491,6 +492,8 @@ use crate::security::security_validator::AdvancedSecurityValidator;
 #[tokio::main]
 #[instrument]
 async fn main() -> Result<()> {
+    init_tracing_with_otel_from_env();
+
     // Globalen Logger initialisieren
     let logger: Arc<Logger> = get_global_logger();
     logger.log_event("system", "Global Logger initialisiert.");
