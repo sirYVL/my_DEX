@@ -613,7 +613,49 @@ async fn main() -> Result<()> {
         logger.log_event("system", "ClusterManager mit Extra Sync-Fee integriert.");
     }
 
-    // (7) P2P-Security initialisieren (STUN/TURN)
+    // (6.3) ShardManager mit CRDT initialisieren
+use crate::shard_logic::shard_manager::ShardManager;
+use crate::watchtower::Watchtower;
+use crate::crdt_logic::{CrdtDelta, Order};
+
+let shard_manager = {
+    let shard_manager = ShardManager::new(3, Some(kad_arc.clone()));
+
+    // 1) Shard erstellen
+    let watchtower = Watchtower::new();
+    shard_manager.create_shard(0, "db_shard_0.db", watchtower)?;
+
+    // 2) Lokalen Node abonnieren
+    let local_id = kad_arc.lock().unwrap().local_id.clone();
+    shard_manager.subscribe_node_to_shard(&local_id.to_string(), 0);
+
+    // 3) Delta anwenden
+    let delta = CrdtDelta {
+        updated_orders: vec![
+            Order {
+                id: "order-123".to_string(),
+                user_id: "local-user".to_string(),
+                timestamp: 0,
+                quantity: 1.5,
+                price: 99.0,
+            }
+        ],
+        removed_orders: vec![],
+    };
+    shard_manager.apply_delta(0, &delta)?;
+
+    // 4) Snapshot + Checkpoint speichern
+    shard_manager.store_shard_snapshot(0)?;
+    shard_manager.checkpoint_and_store(0, 123_456, None)?;
+
+    info!("ShardManager erfolgreich initialisiert und CRDT-Daten angewendet.");
+    shard_manager
+};
+
+logger.log_event("system", "ShardManager mit CRDT initialisiert.");
+
+
+   // (7) P2P-Security initialisieren (STUN/TURN)
     let p2p_sec_cfg = P2PSecurityConfig {
         whitelist: Default::default(),
         blacklist: Default::default(),
