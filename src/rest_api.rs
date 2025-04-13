@@ -4,7 +4,7 @@
 
 use axum::{
     routing::{get, post},
-    extract::{State, Json},
+    extract::{Path, State, Json},
     http::StatusCode,
     response::IntoResponse,
     Router,
@@ -107,9 +107,7 @@ pub async fn get_balance(
     (StatusCode::OK, Json(ApiResponse::success(bal)))
 }
 
-pub async fn get_shard_info(
-    State(state): State<AppState>,
-) -> impl IntoResponse {
+pub async fn get_all_shards(State(state): State<AppState>) -> impl IntoResponse {
     let shard_info = state.shard_manager.shard_info.lock().unwrap();
     let mut entries = vec![];
 
@@ -123,6 +121,39 @@ pub async fn get_shard_info(
     (StatusCode::OK, Json(ApiResponse::success(entries)))
 }
 
+pub async fn get_single_shard(
+    Path(shard_id): Path<u32>,
+    State(state): State<AppState>,
+) -> impl IntoResponse {
+    let shard_info = state.shard_manager.shard_info.lock().unwrap();
+    let replicas = shard_info
+        .get_replicas(shard_id)
+        .into_iter()
+        .map(|id| id.to_string())
+        .collect::<Vec<String>>();
+
+    (StatusCode::OK, Json(ApiResponse::success(ShardInfoEntry {
+        shard_id,
+        replicas,
+    })))
+}
+
+pub async fn force_replicate_shard(
+    Path(shard_id): Path<u32>,
+    State(state): State<AppState>,
+) -> impl IntoResponse {
+    match state.shard_manager.replicate_shard_to_new_node(shard_id) {
+        Ok(_) => (
+            StatusCode::OK,
+            Json(ApiResponse::<()> ::success("Replikation angestoßen")),
+        ),
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ApiResponse::<()> ::error(&format!("Fehler: {:?}", e))),
+        ),
+    }
+}
+
 // ==== Router aufbauen ====
 
 pub fn build_rest_api(state: AppState) -> Router {
@@ -130,6 +161,8 @@ pub fn build_rest_api(state: AppState) -> Router {
         .route("/api/ping", get(ping))
         .route("/api/place_order", post(place_order))
         .route("/api/get_balance", post(get_balance))
-        .route("/api/shards", get(get_shard_info))
+        .route("/api/shards", get(get_all_shards))
+        .route("/api/shard/:id", get(get_single_shard))
+        .route("/api/replicate_shard/:id", post(force_replicate_shard))
         .with_state(state)
 }
