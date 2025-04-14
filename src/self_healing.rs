@@ -1,8 +1,14 @@
+/////////////////////////////////////////////////////
+// my_dex/src/self_healing.rs
+/////////////////////////////////////////////////////
+
 use std::process::Command;
 use std::time::Duration;
 use tokio::time::sleep;
 use tracing::{info, warn, error};
 use chrono::Utc;
+use base64::{engine::general_purpose, Engine as _};
+use crate::dex_logic::sign_utils::KeyPair;
 use crate::gossip::{GossipMessage, broadcast_gossip_message};
 
 /// HealthChecker: Dummy-Funktion für Service Health.
@@ -54,6 +60,10 @@ pub async fn restart_service(service_name: &str) -> Result<(), String> {
 /// Bei Fehler: Gossip-Nachricht senden und Neustart via systemctl versuchen.
 pub async fn monitor_and_heal(service_name: &str, node_id: &str, interval_sec: u64) {
     let mut interval = tokio::time::interval(Duration::from_secs(interval_sec));
+
+    // Beispielhaftes KeyPair – in Produktion solltest du es sicher laden!
+    let keypair = KeyPair::new_random();
+
     loop {
         interval.tick().await;
 
@@ -61,14 +71,18 @@ pub async fn monitor_and_heal(service_name: &str, node_id: &str, interval_sec: u
         if !healthy {
             warn!("Service '{}' ist ungesund – Self-Healing wird gestartet", service_name);
 
+            let message_body = format!("{}:{}:{}", node_id, service_name, Utc::now().timestamp());
+            let signature = keypair.sign_message(message_body.as_bytes());
+            let signature_b64 = general_purpose::STANDARD.encode(signature.serialize_compact());
+
             let gossip_msg = GossipMessage::new(
                 node_id.to_string(),
                 format!("{} failure", service_name),
                 format!("Service {} is unresponsive", service_name),
                 "critical".to_string(),
-                format!("Service {} did not respond in expected time", service_name),
+                message_body,
                 60,
-                Some("signature_placeholder".to_string()),
+                Some(signature_b64),
             );
 
             broadcast_gossip_message(gossip_msg).await;
@@ -82,4 +96,3 @@ pub async fn monitor_and_heal(service_name: &str, node_id: &str, interval_sec: u
         }
     }
 }
-
