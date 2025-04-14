@@ -17,18 +17,9 @@ use crate::self_healing::config::{HealthCheckType, ServiceConfig};
 use crate::self_healing::health_checks::{check_tcp_port, check_http_ok, dummy_health_check};
 use crate::self_healing::escalation::{send_webhook, build_default_payload};
 
-/// Whitelist kritischer DEX-Dienste
-fn allowed_services() -> HashSet<&'static str> {
-    HashSet::from([
-        "my_dex_node.service",
-        "my_dex_api.service",
-        "dex_db_sync.service",
-    ])
-}
-
-/// Sichere Neustartlogik mit Whitelist-Schutz
-pub async fn restart_service(service_name: &str) -> Result<(), String> {
-    if !allowed_services().contains(service_name) {
+/// Sichere Neustartlogik mit dynamischer Whitelist
+pub async fn restart_service(service_name: &str, whitelist: &HashSet<String>) -> Result<(), String> {
+    if !whitelist.contains(service_name) {
         return Err("Dienst nicht autorisiert für Neustart".to_string());
     }
 
@@ -62,8 +53,14 @@ pub async fn restart_service(service_name: &str) -> Result<(), String> {
     Err(format!("Restart von '{}' fehlgeschlagen nach {} Versuchen", service_name, max_attempts))
 }
 
-/// Überwacht Dienst und heilt bei Fehler automatisch
-pub async fn monitor_and_heal(service_name: &str, node_id: &str, interval_sec: u64, config: ServiceConfig) {
+/// Überwacht Dienst und heilt bei Fehler automatisch (mit Whitelist)
+pub async fn monitor_and_heal(
+    service_name: &str,
+    node_id: &str,
+    interval_sec: u64,
+    config: ServiceConfig,
+    whitelist: HashSet<String>
+) {
     let mut ticker = interval(Duration::from_secs(interval_sec));
     let keypair = get_or_create_keypair().expect("Keypair konnte nicht geladen werden");
 
@@ -103,7 +100,7 @@ pub async fn monitor_and_heal(service_name: &str, node_id: &str, interval_sec: u
                 }
             }
 
-            if let Err(e) = restart_service(service_name).await {
+            if let Err(e) = restart_service(service_name, &whitelist).await {
                 error!("Restart fehlgeschlagen: {}", e);
             }
         } else {
