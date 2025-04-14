@@ -12,7 +12,6 @@ use crate::dex_logic::sign_utils::KeyPair;
 use crate::crypto::key_loader::get_or_create_keypair;
 use crate::gossip::{GossipMessage, broadcast_gossip_message};
 
-
 /// HealthChecker: Dummy-Funktion für Service Health.
 /// In Produktion: z. B. Port prüfen, HTTP-Abfrage, DB-Verbindung etc.
 pub async fn check_service_health(service_name: &str) -> bool {
@@ -63,8 +62,9 @@ pub async fn restart_service(service_name: &str) -> Result<(), String> {
 pub async fn monitor_and_heal(service_name: &str, node_id: &str, interval_sec: u64) {
     let mut interval = tokio::time::interval(Duration::from_secs(interval_sec));
 
-    // Beispielhaftes KeyPair – in Produktion solltest du es sicher laden!
-    let keypair = get_or_create_keypair().expect("Key konnte nicht geladen oder erstellt werden");
+    // Erstellt oder lädt den node_key automatisch aus ~/.my_dex/keys/node_key.hex
+    let keypair = get_or_create_keypair()
+        .expect("Key konnte nicht geladen oder erstellt werden");
 
     loop {
         interval.tick().await;
