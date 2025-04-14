@@ -12,14 +12,14 @@ pub struct WatchdogConfig {
     pub services: HashMap<String, ServiceConfig>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 pub struct ServiceConfig {
     pub interval_sec: u64,
     pub health: HealthCheckType,
     pub escalation_webhook: Option<String>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 #[serde(rename_all = "lowercase")]
 pub enum HealthCheckType {
     Tcp { host: String, port: u16 },
