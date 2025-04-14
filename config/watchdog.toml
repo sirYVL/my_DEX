@@ -1,0 +1,38 @@
+# ============================================
+# Watchdog-Konfiguration für my_dex
+# ============================================
+
+# API-Server HealthCheck via HTTP
+[services.my_dex_api]
+interval_sec = 30
+health = { http = { url = "http://127.0.0.1:8080/healthz" } }
+
+# DEX-Node TCP-Check
+[services.my_dex_node]
+interval_sec = 20
+health = { tcp = { host = "127.0.0.1", port = 9000 } }
+
+# Synchronisationsdienst (noch kein HealthCheck implementiert)
+[services.dex_db_sync]
+interval_sec = 60
+health = "dummy"
+
+# Überwacht CRDT-Orderbuch (Custom Check)
+[services.orderbook_monitor]
+interval_sec = 15
+health = { custom = "check_orderbook" }
+
+# Überwacht Matching-Logik (Optional: noch zu implementieren)
+[services.matching_engine_monitor]
+interval_sec = 15
+health = { custom = "check_matching_engine" }
+
+# Prüft ob CRDT-Replication aktiv ist
+[services.crdt_replication]
+interval_sec = 30
+health = { custom = "check_crdt_sync" }
+
+# Prüft ob Gebührenpools vorhanden/befüllt sind
+[services.fee_pool_state]
+interval_sec = 45
+health = { custom = "check_fee_pool" }
