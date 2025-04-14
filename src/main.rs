@@ -1127,9 +1127,10 @@ if let Some(wd_config) = load_watchdog_config("config/watchdog.toml") {
             let node_id = config.node_id.clone();
             let svc_name = service_name.clone();
             let interval = svc_cfg.interval_sec;
-
+            let svc_cfg = svc_cfg.clone(); 
+        
             tokio::spawn(async move {
-                monitor_and_heal(&svc_name, &node_id, interval).await;
+                monitor_and_heal(&svc_name, &node_id, interval, svc_cfg).await;
             });
         }
 
