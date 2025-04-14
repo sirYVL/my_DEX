@@ -1117,7 +1117,7 @@ logger.log_event("system", "ShardManager mit CRDT initialisiert.");
 
 // (23) Self-Healing Watchdog starten
 if let Some(wd_config) = load_watchdog_config("config/watchdog.toml") {
-    print_loaded_services(&wd_config); // optional für Übersicht
+    print_loaded_services(&wd_config);
     if !validate_config(&wd_config) {
         error!("Ungültige Watchdog-Konfiguration – Self-Healing wird nicht gestartet.");
     } else {
@@ -1127,10 +1127,11 @@ if let Some(wd_config) = load_watchdog_config("config/watchdog.toml") {
             let node_id = config.node_id.clone();
             let svc_name = service_name.clone();
             let interval = svc_cfg.interval_sec;
-            let svc_cfg = svc_cfg.clone(); 
-        
+            let svc_cfg = svc_cfg.clone();
+            let wl = whitelist.clone();
+
             tokio::spawn(async move {
-                monitor_and_heal(&svc_name, &node_id, interval, svc_cfg).await;
+                monitor_and_heal(&svc_name, &node_id, interval, svc_cfg, wl).await;
             });
         }
 
@@ -1140,6 +1141,7 @@ if let Some(wd_config) = load_watchdog_config("config/watchdog.toml") {
 } else {
     warn!("Watchdog-Konfiguration konnte nicht geladen werden – kein Self-Healing aktiv.");
 }
+
 
 
     // (24) Warten auf Ctrl+C => geordneter Shutdown
