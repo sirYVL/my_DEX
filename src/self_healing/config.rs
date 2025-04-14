@@ -5,7 +5,7 @@
 use std::collections::{HashMap, HashSet};
 use serde::Deserialize;
 use std::fs;
-use tracing::warn;
+use tracing::{warn, info};
 
 #[derive(Debug, Deserialize)]
 pub struct WatchdogConfig {
@@ -30,7 +30,10 @@ pub enum HealthCheckType {
 pub fn load_config(path: &str) -> Option<WatchdogConfig> {
     match fs::read_to_string(path) {
         Ok(content) => match toml::from_str::<WatchdogConfig>(&content) {
-            Ok(cfg) => Some(cfg),
+            Ok(cfg) => {
+                info!("Watchdog-Konfiguration erfolgreich geladen: {} Dienste", cfg.services.len());
+                Some(cfg)
+            },
             Err(e) => {
                 warn!("Fehler beim Parsen der Konfigurationsdatei: {}", e);
                 None
@@ -43,7 +46,14 @@ pub fn load_config(path: &str) -> Option<WatchdogConfig> {
     }
 }
 
-/// Gibt Whitelist der erlaubten Dienste aus der Config zur�ck
+/// Gibt Whitelist der erlaubten Dienste aus der Config zurück
 pub fn extract_whitelist(config: &WatchdogConfig) -> HashSet<String> {
     config.services.keys().cloned().collect()
+}
+
+/// Debug-Ausgabe aller geladenen Dienste (für Startup-Check)
+pub fn print_loaded_services(config: &WatchdogConfig) {
+    for (name, svc) in &config.services {
+        info!("Service '{}' konfiguriert mit {}s-Intervall", name, svc.interval_sec);
+    }
 }
