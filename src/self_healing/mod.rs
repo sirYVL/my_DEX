@@ -1,3 +1,8 @@
+//////////////////////////////////////////////////
+// my_dex/src/self_healing/mod.rs
+//////////////////////////////////////////////////
+
 pub mod watchdog;
-// pub mod escalation;
-// pub mod health_checks;
+pub mod health_checks;
+pub mod escalation;
+pub mod config;
