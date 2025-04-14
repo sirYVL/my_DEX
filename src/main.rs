@@ -9,31 +9,32 @@
 //  5) Logging & Audit einrichten, inkl. detailliertes Logging für Abstimmungen (Fullnode & Trader Dashboards).
 //  6) DB initialisieren (RocksDB oder InMemory-Fallback).
 //  6.1) Distributed DB Replication starten (Optimierung der Zustandsverwaltung).
+//  6.2) ClusterManager mit Node-Sync-Fee starten.
+//  6.3) ShardManager mit CRDT initialisieren.
 //  7) P2P-Security initialisieren (STUN/TURN).
 //  8) DexNode anlegen & starten (inkl. optionaler globaler Security-Integration).
-//  8.1) Sicherheits-Demo: Block erstellen, signieren und verifizieren
-//  8.2) Light Client Konsensüberprüfung integrieren
+//  8.1) Sicherheits-Demo: Block erstellen, signieren und verifizieren.
+//  8.2) Light Client Konsensüberprüfung integrieren.
 //  9) MatchingEngine initialisieren.
-// 10) Kademlia-Service + echter TcpP2PAdapter (mit optionaler Verschlüsselung) initialisieren.
+//  9.1) Settlement-Workflow optimieren: SecuredSettlementEngine einsetzen.
+// 10) Kademlia-Service + TcpP2PAdapter starten.
 // 10.1) Sichere TCP-Operation durchführen (TLS-verschlüsselt).
 // 11) mDNS Discovery-Task starten.
 // 12) Monitoring-Server (Global und Node-Scope) starten.
 // 12.1) Konsens-Sicherheitsprozess initialisieren (SecurityDecorator).
 // 13) Asynchrone Sicherheits-Tasks starten.
-// 14) CRDT-Demo-Operationen auf dem DexNode (partial fill) durchführen.
+// 14) CRDT partial fill Demo auf dem DexNode durchführen.
 // 15) Accounts/Wallet-Demo implementieren (Fullnode vs. NormalUser, 2FA, Delete -> Spenden).
-// 15.1) Settlement-Workflow optimieren: SecuredSettlementEngine einsetzen.
-// 16) Start des Fee-Pool-Distributor-Tasks (periodische Fee-Ausschüttung) starten.
-// 17) Beispiel: Audit eines Handelsereignisses durchführen.
-// 17.1) Layer-2 DEX Integration: Initialisiere und verarbeite einen Trade via Layer2DEX
+// 16) Start des Fee-Pool-Distributor-Tasks (periodische Fee-Ausschüttung).
+// 17) Audit eines Handelsereignisses durchführen.
+// 17.1) Layer-2 DEX Integration & Trade-Verarbeitung via Layer2DEX.
 // 18) Time-Limited Orders: Hintergrund-Task zum Prüfen abgelaufener Orders starten.
-// 19) Detailliertes Logging & Monitoring von Abstimmungen realisieren.
-// 20) IPFS-Integration: Audit-Log dezentral über den lokalen IPFS-Knoten speichern.
-// 21) IPFS-Integration: Konfigurationsdatei dezentral über den lokalen IPFS-Knoten speichern.
-// 22) Dezentrale Fehlerverteilung mittels Gossip/Self-Healing implementieren.
-// 23) Warten auf Ctrl+C => geordneter Shutdown.
-// 24) Dezentrale Backup- und Wiederherstellungsmechanismen implementieren.
-// 25) Dezentrale Fehlerverteilung und Self-Healing implementieren.
+// 19) PriceFeed starten & Account-Endpunkte bereitstellen.
+// 20) IPFS-Integration: Audit-Log dezentral speichern.
+// 21) IPFS-Integration: Konfigurationsdatei dezentral speichern.
+// 22) Dezentrale Fehlerverteilung via Reliable Gossip.
+// 23) Self-Healing Watchdog starten (Config-basiert, parallelisiert, modular).
+// 24) Warten auf Ctrl+C => geordneter Shutdown.
 //
 
 use anyhow::Result;
@@ -66,7 +67,6 @@ use crate::identity::wallet::{
 };
 use crate::fees::fee_pool::FeePool;
 use crate::dex_logic::time_limited_orders::check_expired_time_limited_orders;
-
 use crate::network::p2p_adapter::TcpP2PAdapter;
 
 use axum::{
@@ -261,13 +261,13 @@ mod gossip {
     }
 }
 
-mod self_healing {
-    use std::process::Command;
-    use std::time::Duration;
-    use tokio::time::sleep;
-    use tracing::{info, warn};
-    use chrono::Utc;
-    use crate::gossip::{FaultMessage, broadcast_gossip_message};
+mod self_healing;
+use crate::self_healing::{
+    config::load_config as load_watchdog_config,
+    config::extract_whitelist,
+    watchdog::monitor_and_heal,
+};
+
 
     pub async fn check_service_health(service_name: &str) -> bool {
         false
@@ -1115,14 +1115,26 @@ logger.log_event("system", "ShardManager mit CRDT initialisiert.");
         logger.log_event("system", "Beispielhafte Fehlermeldung via Reliable Gossip verschickt.");
     }
 
-    // (23) Self-Healing-Mechanismen implementieren
-    {
-        let node_id = "node-123";
+// (23) Self-Healing Watchdog starten
+if let Some(wd_config) = load_watchdog_config("config/watchdog.toml") {
+    let whitelist = extract_whitelist(&wd_config);
+
+    for (service_name, svc_cfg) in wd_config.services.iter() {
+        let node_id = config.node_id.clone();
+        let svc_name = service_name.clone();
+        let interval = svc_cfg.interval_sec;
+
         tokio::spawn(async move {
-            self_healing::monitor_and_heal("database", node_id, 30).await;
+            monitor_and_heal(&svc_name, &node_id, interval).await;
         });
-        logger.log_event("system", "Self-Healing-Mechanismen gestartet.");
     }
+
+    info!("Self-Healing Watchdog aktiviert für {} Dienste", whitelist.len());
+    logger.log_event("system", "Self-Healing Watchdog aktiviert.");
+} else {
+    warn!("Watchdog-Konfiguration konnte nicht geladen werden – kein Self-Healing aktiv.");
+}
+
 
     // (24) Warten auf Ctrl+C => geordneter Shutdown
     info!("DEX Node läuft – drücken Sie Strg+C zum Beenden");
