@@ -5,7 +5,7 @@
 use std::collections::{HashMap, HashSet};
 use serde::Deserialize;
 use std::fs;
-use tracing::{warn, info};
+use tracing::{warn, info, error};
 
 #[derive(Debug, Deserialize)]
 pub struct WatchdogConfig {
@@ -56,4 +56,40 @@ pub fn print_loaded_services(config: &WatchdogConfig) {
     for (name, svc) in &config.services {
         info!("Service '{}' konfiguriert mit {}s-Intervall", name, svc.interval_sec);
     }
+}
+
+/// Validiert die Watchdog-Konfiguration auf offensichtliche Fehler
+pub fn validate_config(config: &WatchdogConfig) -> bool {
+    let mut valid = true;
+
+    for (name, svc) in &config.services {
+        if svc.interval_sec == 0 {
+            warn!("Service '{}' hat ungültiges Intervall: 0s", name);
+            valid = false;
+        }
+
+        match &svc.health {
+            HealthCheckType::Tcp { host, port } => {
+                if host.is_empty() || *port == 0 {
+                    warn!("TCP-HealthCheck von '{}' ist ungültig: host='{}', port={}", name, host, port);
+                    valid = false;
+                }
+            }
+            HealthCheckType::Http { url } => {
+                if url.is_empty() {
+                    warn!("HTTP-HealthCheck von '{}' ist ungültig: url fehlt", name);
+                    valid = false;
+                }
+            }
+            HealthCheckType::Dummy => {
+                info!("Service '{}' verwendet Dummy-Check", name);
+            }
+        }
+    }
+
+    if !valid {
+        error!("Die Watchdog-Konfiguration enthält ungültige Einträge.");
+    }
+
+    valid
 }
