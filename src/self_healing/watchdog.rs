@@ -16,6 +16,7 @@ use crate::gossip::{GossipMessage, broadcast_gossip_message};
 use crate::self_healing::config::{HealthCheckType, ServiceConfig};
 use crate::self_healing::health_checks::{check_tcp_port, check_http_ok, dummy_health_check};
 use crate::self_healing::escalation::{send_webhook, build_default_payload};
+use crate::self_healing::custom_checks::check_orderbook_state;
 
 /// Sichere Neustartlogik mit dynamischer Whitelist
 pub async fn restart_service(service_name: &str, whitelist: &HashSet<String>) -> Result<(), String> {
@@ -71,6 +72,13 @@ pub async fn monitor_and_heal(
             HealthCheckType::Tcp { host, port } => check_tcp_port(host, *port, 3),
             HealthCheckType::Http { url } => check_http_ok(url, 3).await,
             HealthCheckType::Dummy => dummy_health_check(service_name).await,
+            HealthCheckType::Custom(name) => match name.as_str() {
+                "check_orderbook" => check_orderbook_state().await,
+                other => {
+                    warn!("Unbekannter Custom-HealthCheck: '{}'", other);
+                    false
+                }
+            },
         };
 
         if !healthy {
@@ -108,3 +116,4 @@ pub async fn monitor_and_heal(
         }
     }
 }
+
