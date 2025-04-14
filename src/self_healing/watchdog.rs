@@ -1,6 +1,6 @@
-//////////////////////////////////////////////////
-// my_dex/src/self_healing/watchdog.rs
-//////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////
+/// my_dex/src/self_healing/wachtdog.rs
+//////////////////////////////////////////////////////////////////
 
 use std::process::Command;
 use std::collections::HashSet;
@@ -23,7 +23,7 @@ fn allowed_services() -> HashSet<&'static str> {
     ])
 }
 
-/// Dummy-Gesundheitsprüfung – später anpassbar
+/// Dummy-Gesundheitspr�fung � sp�ter anpassbar
 pub async fn check_service_health(_service_name: &str) -> bool {
     // TODO: Replace with real health check
     false
@@ -32,14 +32,14 @@ pub async fn check_service_health(_service_name: &str) -> bool {
 /// Sichere Neustartlogik mit Whitelist-Schutz
 pub async fn restart_service(service_name: &str) -> Result<(), String> {
     if !allowed_services().contains(service_name) {
-        return Err("Dienst nicht autorisiert für Neustart".to_string());
+        return Err("Dienst nicht autorisiert f�r Neustart".to_string());
     }
 
     let max_attempts = 3;
     let base_delay = Duration::from_secs(2);
 
     for attempt in 1..=max_attempts {
-        info!("Restart-Versuch {} für '{}'", attempt, service_name);
+        info!("Restart-Versuch {} f�r '{}'", attempt, service_name);
 
         let result = Command::new("systemctl")
             .arg("restart")
@@ -65,7 +65,7 @@ pub async fn restart_service(service_name: &str) -> Result<(), String> {
     Err(format!("Restart von '{}' fehlgeschlagen nach {} Versuchen", service_name, max_attempts))
 }
 
-/// Überwacht Dienst und heilt bei Fehler automatisch
+/// �berwacht Dienst und heilt bei Fehler automatisch
 pub async fn monitor_and_heal(service_name: &str, node_id: &str, interval_sec: u64) {
     let mut ticker = interval(Duration::from_secs(interval_sec));
     let keypair = get_or_create_keypair().expect("Keypair konnte nicht geladen werden");
@@ -74,7 +74,7 @@ pub async fn monitor_and_heal(service_name: &str, node_id: &str, interval_sec: u
         ticker.tick().await;
 
         if !check_service_health(service_name).await {
-            warn!("Dienst '{}' ungesund – starte Self-Healing", service_name);
+            warn!("Dienst '{}' ungesund � starte Self-Healing", service_name);
 
             let timestamp = Utc::now().timestamp();
             let body = format!("{}:{}:{}", node_id, service_name, timestamp);
