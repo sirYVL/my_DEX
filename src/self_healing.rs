@@ -9,9 +9,8 @@ use tracing::{info, warn, error};
 use chrono::Utc;
 use base64::{engine::general_purpose, Engine as _};
 use crate::dex_logic::sign_utils::KeyPair;
-use crate::crypto::key_loader::load_keypair_from_file;
+use crate::crypto::key_loader::get_or_create_keypair;
 use crate::gossip::{GossipMessage, broadcast_gossip_message};
-
 
 
 /// HealthChecker: Dummy-Funktion für Service Health.
@@ -65,7 +64,7 @@ pub async fn monitor_and_heal(service_name: &str, node_id: &str, interval_sec: u
     let mut interval = tokio::time::interval(Duration::from_secs(interval_sec));
 
     // Beispielhaftes KeyPair – in Produktion solltest du es sicher laden!
-    let keypair = KeyPair::new_random();
+    let keypair = get_or_create_keypair().expect("Key konnte nicht geladen oder erstellt werden");
 
     loop {
         interval.tick().await;
