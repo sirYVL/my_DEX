@@ -9,8 +9,9 @@ use tracing::{info, warn, error};
 use chrono::Utc;
 use base64::{engine::general_purpose, Engine as _};
 use crate::dex_logic::sign_utils::KeyPair;
-use crate::gossip::{GossipMessage, broadcast_gossip_message};
 use crate::crypto::key_loader::load_keypair_from_file;
+use crate::gossip::{GossipMessage, broadcast_gossip_message};
+
 
 
 /// HealthChecker: Dummy-Funktion für Service Health.
