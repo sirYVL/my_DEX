@@ -1,4 +1,3 @@
-# File: .github/workflows/static_analysis.yaml
 name: Static Code Analysis
 
 on:
@@ -13,38 +12,43 @@ jobs:
   static-analysis:
     name: Run Static Code Analysis with Cargo Clippy and Cargo Audit
     runs-on: ubuntu-latest
+
     steps:
-      # Checkout des Codes
+      # Checkout the code
       - name: Checkout Code
         uses: actions/checkout@v3
 
-      # Einrichtung der Rust-Toolchain
+      # Set up Rust Toolchain
       - name: Set up Rust Toolchain
         uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
           override: true
 
-      # Ausf�hren von Cargo Clippy und Speichern des Berichts
+      # Install Cargo Audit
+      - name: Install Cargo Audit
+        run: cargo install cargo-audit
+
+      # Run Cargo Clippy and save the report
       - name: Run Cargo Clippy and Save Report
         run: |
           cargo clippy --all-targets --all-features -- -D warnings 2>&1 | tee clippy_report.txt
 
-      # Ausf�hren von Cargo Audit und Speichern des Berichts
+      # Run Cargo Audit and save the report
       - name: Run Cargo Audit and Save Report
         run: |
           cargo audit 2>&1 | tee cargo_audit_report.txt
 
-      # Hochladen des Clippy-Berichts als Artifact
+      # Upload Clippy Report
       - name: Upload Clippy Report
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v3.1.2
         with:
           name: clippy-report
           path: clippy_report.txt
 
-      # Hochladen des Cargo Audit-Berichts als Artifact
+      # Upload Cargo Audit Report
       - name: Upload Cargo Audit Report
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v3.1.2
         with:
           name: cargo-audit-report
           path: cargo_audit_report.txt
