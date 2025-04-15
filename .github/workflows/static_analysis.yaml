@@ -41,14 +41,14 @@ jobs:
 
       # Upload Clippy Report
       - name: Upload Clippy Report
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3.1.2
         with:
           name: clippy-report
           path: clippy_report.txt
 
       # Upload Cargo Audit Report
       - name: Upload Cargo Audit Report
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3.1.2
         with:
           name: cargo-audit-report
           path: cargo_audit_report.txt
