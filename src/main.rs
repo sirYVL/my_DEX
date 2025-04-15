@@ -81,6 +81,8 @@ use axum::Json;
 use serde_json::json;
 
 use crate::dex_logic::time_limited_orders::TimeLimitedOrderManager;
+use crate::self_healing::custom_checks::inject_orderbook;
+use crate::dex_logic::crdt_orderbook::OrderBookCRDT;
 use crate::security::global_security_facade::GlobalSecuritySystem;
 use crate::matching_engine::MatchingEngine;
 use crate::crypto_scraper::PriceFeed;
@@ -652,6 +654,9 @@ let shard_manager = {
     shard_manager
 };
 
+if let Some(orderbook) = shard_manager.get_orderbook_crdt(0) {
+    inject_orderbook(orderbook);
+}
 logger.log_event("system", "ShardManager mit CRDT initialisiert.");
 
 
